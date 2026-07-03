@@ -8,12 +8,10 @@ const PORT = 3000;
 
 app.use(express.json());
 
-// Main conversation thread array stored dynamically in memory
 let conversationHistory = [];
 
 app.get('/favicon.ico', (req, res) => res.status(204).end());
 
-// Serve the frontend interface markup
 app.get('/', (req, res) => {
     res.send(`
     <!DOCTYPE html>
@@ -36,17 +34,6 @@ app.get('/', (req, res) => {
             .features-title { font-size: 0.85rem; text-transform: uppercase; font-weight: 600; color: #718096; margin-bottom: 10px; }
             .feature-item { font-size: 0.85rem; color: #4a5568; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; }
             
-            /* --- Client-Side Tool Box Style --- */
-            .tool-card { margin-top: 20px; background: #ffffff; border: 1px dashed #cbd5e0; border-radius: 8px; padding: 12px; font-size: 0.85rem; }
-            .tool-card input[type="file"] { display: none; }
-            .upload-label-btn { display: block; text-align: center; background: #e2e8f0; padding: 8px; border-radius: 6px; font-weight: 600; cursor: pointer; margin-bottom: 8px; transition: background 0.2s; }
-            .upload-label-btn:hover { background: #cbd5e0; }
-            .tool-options { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
-            .tool-options input { width: 100%; padding: 6px; border: 1px solid #e2e8f0; border-radius: 4px; outline: none; }
-            .tool-action-btn { background: #38a169; color: white; border: none; padding: 8px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; }
-            .tool-action-btn:hover { background: #2f855a; }
-            .tool-action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
-
             .chat-container { display: flex; flex-direction: column; flex: 1; height: 100%; max-width: 900px; margin: 0 auto; background-color: #ffffff; box-shadow: 0 0 20px rgba(0,0,0,0.02); }
             .header { padding: 16px 24px; border-bottom: 1px solid #edf2f7; display: flex; justify-content: space-between; align-items: center; background: #ffffff; }
             .header h1 { font-size: 1.1rem; font-weight: 600; color: #2d3748; }
@@ -65,14 +52,19 @@ app.get('/', (req, res) => {
             .sender-label { font-size: 0.75rem; font-weight: 700; margin-bottom: 4px; color: #718096; }
             
             .msg-text p { margin-bottom: 10px; }
-            .msg-text ul, .msg-text ol { margin-left: 20px; margin-bottom: 10px; }
             .msg-text code { background-color: #edf2f7; padding: 2px 6px; border-radius: 4px; font-family: monospace; color: #e53e3e; }
             .msg-text pre { background-color: #1a202c; color: #edf2f7; padding: 14px; border-radius: 8px; overflow-x: auto; margin: 12px 0; font-family: monospace; }
-            .msg-text pre code { background-color: transparent; padding: 0; color: inherit; }
 
+            .file-badge { background: #feebc8; color: #c05621; padding: 4px 8px; border-radius: 6px; display: inline-flex; align-items: center; gap: 6px; font-size: 0.8rem; font-weight: bold; margin-bottom: 8px; width: fit-content; }
             .qr-image { margin-top: 12px; max-width: 180px; border: 4px solid #ffffff; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
             .input-wrapper { padding: 20px 24px 30px 24px; background: #ffffff; border-top: 1px solid #edf2f7; }
             .input-area { display: flex; gap: 12px; background: #f7fafc; padding: 10px 16px; border-radius: 24px; border: 1px solid #e2e8f0; align-items: center; }
+            
+            .file-upload-btn { cursor: pointer; color: #718096; font-size: 1.3rem; transition: color 0.2s; padding: 0 4px; user-select: none; }
+            .file-upload-btn:hover { color: #3182ce; }
+            .file-upload-btn.active { color: #38a169; }
+            #pdfFileInput { display: none; }
+
             .input-area input { flex: 1; background: transparent; border: none; color: #2d3748; outline: none; font-size: 0.95rem; }
             .input-area button { background: #3182ce; color: #ffffff; border: none; padding: 8px 18px; border-radius: 18px; font-weight: 600; cursor: pointer; }
             
@@ -84,31 +76,14 @@ app.get('/', (req, res) => {
         <div class="sidebar">
             <div>
                 <div class="sidebar-title">AI hai <span>Bhaisahab</span></div>
-                
                 <div class="features-box">
                     <div class="features-title">⚙️ Optimization Engine</div>
-                    <div class="feature-item">⚡ <b>Edge Conversion</b> via Browser</div>
-                    <div class="feature-item">🔋 <b>0% Server Power Used</b></div>
+                    <div class="feature-item">⚡ <b>Hybrid AI Intercept</b></div>
+                    <div class="feature-item">🔋 <b>Device-Side Slicing</b></div>
                     <div class="feature-item">🤖 Local Gemma Processing active</div>
                 </div>
-
-                <div class="tool-card">
-                    <div style="font-weight: bold; margin-bottom: 8px; color: #2d3748;">📁 High-Speed PDF Slicer</div>
-                    <label for="pdfFile" class="upload-label-btn" id="uploadLabel">Select PDF File</label>
-                    <input type="file" id="pdfFile" accept=".pdf" onchange="loadPdfInBrowser()">
-                    
-                    <div id="pdfToolControls" style="display: none;">
-                        <div style="font-size: 11px; color: #718096; margin-bottom: 6px;" id="pdfMetaInfo">0 Pages detected</div>
-                        <div class="tool-options">
-                            <label style="font-size: 11px; font-weight: bold;">Page Settings:</label>
-                            <input type="text" id="pageRangeInput" placeholder="e.g., 1,3,5 or leave blank for ALL">
-                            <button class="tool-action-btn" id="sliceBtn" onclick="processPdfOnClient()">Extract Pages ZIP</button>
-                        </div>
-                    </div>
-                </div>
-
             </div>
-            <div class="feature-item" style="color: #a0aec0; font-size: 0.75rem;">v4.0.1 • Fixed Render Mode</div>
+            <div class="feature-item" style="color: #a0aec0; font-size: 0.75rem;">v5.0.0 • Interactive AI Agent</div>
         </div>
 
         <div class="chat-container">
@@ -124,120 +99,85 @@ app.get('/', (req, res) => {
                     <div class="avatar">AB</div>
                     <div class="msg-body">
                         <div class="sender-label">AI hai Bhaisahab</div>
-                        <div class="msg-text">Hello! I can answer questions, generate QR codes, or slice up PDFs right inside your browser session without touching server hardware. What are we building today?</div>
+                        <div class="msg-text">Hello! Click the paperclip icon to select a PDF, and tell me: *"Extract pages 1, 2, 4"* or *"Extract all pages"*. I'll handle the parsing and zip it up right away!</div>
                     </div>
                 </div>
             </div>
             <div class="input-wrapper">
+                <div id="attachedFileBadge" style="display:none;"></div>
                 <div class="input-area">
-                    <input type="text" id="userInput" placeholder="Ask anything, or ask to generate a QR code link..." onkeydown="if(event.key === 'Enter') sendMessage()">
+                    <label for="pdfFileInput" class="file-upload-btn" id="clipIcon" title="Attach PDF File">📎</label>
+                    <input type="file" id="pdfFileInput" accept=".pdf" onchange="registerPdfFile()">
+                    <input type="text" id="userInput" placeholder="Ask anything, or ask to extract PDF ranges..." onkeydown="if(event.key === 'Enter') sendMessage()">
                     <button onclick="sendMessage()">Send</button>
                 </div>
-                <div class="footer-note">AI hai Bhaisahab uses your device context to calculate data conversions instantly.</div>
+                <div class="footer-note">AI hai Bhaisahab safely processes data containers locally inside your browser window.</div>
             </div>
         </div>
 
         <script>
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
             
-            let loadedPdfDoc = null;
-            let loadedFileName = "";
+            let currentPdfFile = null;
+            let currentPdfDoc = null;
 
-            marked.setOptions({ breaks: true, gfm: true });
-
-            // --- BROWSER-SIDE PDF READING ENGINE ---
-            async function loadPdfInBrowser() {
-                const fileInput = document.getElementById('pdfFile');
-                if (fileInput.files.length === 0) return;
-
-                const file = fileInput.files[0];
-                loadedFileName = file.name;
-                document.getElementById('uploadLabel').innerText = "🔄 Change PDF";
+            function registerPdfFile() {
+                const input = document.getElementById('pdfFileInput');
+                if(input.files.length === 0) return;
                 
-                try {
-                    const arrayBuffer = await file.arrayBuffer();
-                    loadedPdfDoc = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-                    
-                    document.getElementById('pdfMetaInfo').innerText = \`📄 Loaded: \${loadedFileName} (\${loadedPdfDoc.numPages} Pages)\`;
-                    document.getElementById('pdfToolControls').style.display = "block";
-                } catch(err) {
-                    alert("Failed to read PDF inside browser workspace: " + err.message);
-                }
+                currentPdfFile = input.files[0];
+                document.getElementById('clipIcon').classList.add('active');
+                
+                const badge = document.getElementById('attachedFileBadge');
+                badge.className = "file-badge";
+                badge.innerHTML = \`📄 \${currentPdfFile.name} attached successfully\`;
+                badge.style.display = "block";
+
+                // Warm up the reader stream layers instantly
+                const fileReader = new FileReader();
+                fileReader.onload = async function() {
+                    const typedarray = new Uint8Array(this.result);
+                    currentPdfDoc = await pdfjsLib.getDocument({data: typedarray}).promise;
+                };
+                fileReader.readAsArrayBuffer(currentPdfFile);
             }
 
-            // --- PURE CLIENT-SIDE PDF RENDERING & ZIP GENERATOR ---
-            async function processPdfOnClient() {
-                if (!loadedPdfDoc) return;
+            async function processPdfExtraction(pagesArray) {
+                if (!currentPdfDoc || !currentPdfFile) return "No active document layer found.";
                 
-                const sliceBtn = document.getElementById('sliceBtn');
-                const pageInput = document.getElementById('pageRangeInput').value.trim();
+                const zip = new JSZip();
+                const folder = zip.folder("extracted_images");
+                const baseName = currentPdfFile.name.replace(".pdf", "");
                 
-                sliceBtn.disabled = true;
-                sliceBtn.innerText = "Processing...";
-
-                let targetPages = [];
-                if (pageInput) {
-                    targetPages = pageInput.split(',').map(p => parseInt(p.trim())).filter(p => !isNaN(p) && p >= 1 && p <= loadedPdfDoc.numPages);
-                } else {
-                    for(let i = 1; i <= loadedPdfDoc.numPages; i++) targetPages.push(i);
+                let targetPages = [...pagesArray];
+                if (targetPages.length === 0) {
+                    for(let i = 1; i <= currentPdfDoc.numPages; i++) targetPages.push(i);
                 }
 
-                try {
-                    const zip = new JSZip();
-                    const folder = zip.folder("extracted_images");
-                    const baseName = loadedFileName.replace(".pdf", "");
-
-                    for (let i = 0; i < targetPages.length; i++) {
-                        const pageNum = targetPages[i];
-                        sliceBtn.innerText = \`Slicing Page \${pageNum}...\`;
-                        
-                        const page = await loadedPdfDoc.getPage(pageNum);
-                        const viewport = page.getViewport({ scale: 2.0 });
-                        
-                        const canvas = document.createElement('canvas');
-                        const ctx = canvas.getContext('2d');
-                        canvas.height = viewport.height;
-                        canvas.width = viewport.width;
-
-                        await page.render({ canvasContext: ctx, viewport: viewport }).promise;
-                        
-                        const dataUrl = canvas.toDataURL('image/png');
-                        const base64Content = dataUrl.split(',')[1];
-                        
-                        folder.file(\`\${baseName}_page_\${pageNum}.png\`, base64Content, { base64: true });
-                    }
-
-                    sliceBtn.innerText = "Packing ZIP File...";
-                    const zipContent = await zip.generateAsync({ type: "blob" });
+                for(let pageNum of targetPages) {
+                    if (pageNum < 1 || pageNum > currentPdfDoc.numPages) continue;
                     
-                    const downloadUrl = URL.createObjectURL(zipContent);
-                    const link = document.createElement('a');
-                    link.href = downloadUrl;
-                    link.download = \`\${baseName}_extracted_images.zip\`;
-                    link.click();
+                    const page = await currentPdfDoc.getPage(pageNum);
+                    const viewport = page.getViewport({ scale: 2.0 });
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
 
-                    const chatBox = document.getElementById('chatBox');
-                    chatBox.innerHTML += \`
-                        <div class="message ai-msg">
-                            <div class="avatar">AB</div>
-                            <div class="msg-body">
-                                <div class="sender-label">AI hai Bhaisahab</div>
-                                <div class="system-status">⚡ [Client-Side offloading executed successfully]</div>
-                                <div class="msg-text">Bhaisahab, your zip folder containing <b>\${targetPages.length} pages</b> converted into high-resolution images has been delivered via native pipeline processing context!</div>
-                            </div>
-                        </div>
-                    \`;
-                    chatBox.scrollTop = chatBox.scrollHeight;
-
-                } catch(err) {
-                    alert("Extraction crash: " + err.message);
-                } finally {
-                    sliceBtn.disabled = false;
-                    sliceBtn.innerText = "Extract Pages ZIP";
+                    await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+                    const dataUrl = canvas.toDataURL('image/png');
+                    folder.file(\`\${baseName}_page_\${pageNum}.png\`, dataUrl.split(',')[1], {base64: true});
                 }
+
+                const blob = await zip.generateAsync({type: "blob"});
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = \`\${baseName}_extracted.zip\`;
+                link.click();
+                
+                return \`Successfully sliced \${targetPages.length} pages into **\${baseName}_extracted.zip**.\`;
             }
 
-            // --- REGULAR CHAT COMMUNICATIONS ENGINE ---
             async function sendMessage() {
                 const inputEl = document.getElementById('userInput');
                 const chatBox = document.getElementById('chatBox');
@@ -245,13 +185,12 @@ app.get('/', (req, res) => {
                 if(!text) return;
 
                 inputEl.value = '';
-                
-                // FIXED INTERNAL STRIP-STRING TEMPLATE TO RENDER CLEAN INTERFACES
                 const safeContent = escapeHtml(text);
+                
                 chatBox.innerHTML += \`
                     <div class="message user-msg">
                         <div class="msg-body">
-                            <div class="sender-label" style="color: #4a5568; text-align: right;">You</div>
+                            <div class="sender-label" style="text-align: right;">You</div>
                             <div class="msg-text">\${safeContent}</div>
                         </div>
                     </div>
@@ -265,32 +204,46 @@ app.get('/', (req, res) => {
                         body: JSON.stringify({ message: text })
                     });
                     
-                    if (!response.ok) throw new Error('Server Error');
-                    
                     const data = await response.json();
-                    let aiMessageHtml = \`
-                        <div class="message ai-msg">
-                            <div class="avatar">AB</div>
-                            <div class="msg-body">
-                                <div class="sender-label">AI hai Bhaisahab</div>
-                    \`;
+                    let aiMessageHtml = \`<div class="message ai-msg"><div class="avatar">AB</div><div class="msg-body"><div class="sender-label">AI hai Bhaisahab</div>\`;
                     
-                    if(data.toolTriggered) {
-                        aiMessageHtml += \`<div class="system-status">⚡ [Tool Activated] Task offloaded natively (Saved Power & Time)</div>\`;
+                    if(data.text.includes('TRIGGER_PDF_ZIP:')) {
+                        aiMessageHtml += \`<div class="system-status">⚡ [AI Intent Intercepted] Offloading Slicing to Device Browser Engine...</div>\`;
+                        
+                        const pagesMatch = data.text.match(/pages=\\\[([^\\\]]*)\\\]/i);
+                        let pageNumbers = [];
+                        if (pagesMatch && pagesMatch[1].trim()) {
+                            pageNumbers = pagesMatch[1].split(',').map(n => parseInt(n.trim())).filter(n => !isNaN(n));
+                        }
+                        
+                        if(currentPdfDoc) {
+                            const summaryText = await processPdfExtraction(pageNumbers);
+                            aiMessageHtml += \`<div class="msg-text">\${marked.parse(summaryText)}</div>\`;
+                            
+                            // Reset file parameters post execution
+                            currentPdfDoc = null;
+                            currentPdfFile = null;
+                            document.getElementById('clipIcon').classList.remove('active');
+                            document.getElementById('attachedFileBadge').style.display = "none";
+                            document.getElementById('pdfFileInput').value = '';
+                        } else {
+                            aiMessageHtml += \`<div class="msg-text" style="color:red;">Bhaisahab, you told me to extract pages but forgot to upload the PDF file using the paperclip button first!</div>\`;
+                        }
+                    } 
+                    else if (data.text.includes('TRIGGER_QR:')) {
+                        aiMessageHtml += \`<div class="system-status">⚡ [Tool Activated] Rendered Local QR Node</div>\`;
+                        aiMessageHtml += \`<div class="msg-text">\${marked.parse(data.responseText)}</div>\`;
+                        if(data.qrImage) aiMessageHtml += \`<img src="\${data.qrImage}" class="qr-image" />\`;
                     }
-                    
-                    const parsedMarkdownContent = marked.parse(data.text);
-                    aiMessageHtml += \`<div class="msg-text">\${parsedMarkdownContent}</div>\`;
-                    
-                    if(data.qrImage) {
-                        aiMessageHtml += \`<img src="\${data.qrImage}" class="qr-image" alt="QR Code" />\`;
+                    else {
+                        aiMessageHtml += \`<div class="msg-text">\${marked.parse(data.text)}</div>\`;
                     }
                     
                     aiMessageHtml += \`</div></div>\`;
                     chatBox.innerHTML += aiMessageHtml;
                     
                 } catch(err) {
-                    chatBox.innerHTML += \`<div class="message ai-msg"><div class="avatar" style="background-color: #e53e3e;">!</div><div class="msg-body"><div class="sender-label" style="color: #e53e3e;">System Error</div><div style="color: #e53e3e;">❌ Connection Error</div></div></div>\`;
+                    aiMessageHtml += \`<div class="message ai-msg"><div class="avatar" style="background:red;">!</div><div class="msg-body"><div style="color:red;">❌ Communication Failure</div></div></div>\`;
                 }
                 chatBox.scrollTop = chatBox.scrollHeight;
             }
@@ -304,46 +257,46 @@ app.get('/', (req, res) => {
     `);
 });
 
-// Post conversation gateway endpoint tracking text commands safely
 app.post('/api/chat', async (req, res) => {
     const { message } = req.body;
-    let payload = { text: '', qrImage: null, toolTriggered: false };
+    let payload = { text: '', responseText: '', qrImage: null };
 
     try {
         conversationHistory.push({ role: 'user', content: message });
-
         let aiResponse = await sendChatMessage(conversationHistory);
         let aiContent = aiResponse.content || '';
 
-        if (aiContent.includes('TRIGGER_QR:')) {
+        // Capture PDF instructions text tags
+        if (aiContent.includes('TRIGGER_PDF_ZIP:')) {
+            payload.text = aiContent; 
+            conversationHistory.push({ role: 'assistant', content: "Processed PDF slice execution sequence request." });
+        } 
+        // Capture QR code generator instructions tags
+        else if (aiContent.includes('TRIGGER_QR:')) {
             const urlStartIndex = aiContent.indexOf('TRIGGER_QR:') + 11;
             const urlEndIndex = aiContent.indexOf(']', urlStartIndex);
-            
             if (urlStartIndex !== -1 && urlEndIndex !== -1) {
                 let targetUrl = aiContent.substring(urlStartIndex, urlEndIndex).trim();
                 if (!targetUrl.startsWith('http')) targetUrl = 'https://' + targetUrl;
-
-                payload.toolTriggered = true;
-                const toolResult = await executeQrCodeTool({ url: targetUrl });
                 
-                if (toolResult.success) {
-                    payload.qrImage = toolResult.output;
-                    payload.text = `Bhaisahab, here is your requested QR code image for: ${targetUrl}`;
-                    conversationHistory.push({ role: 'assistant', content: payload.text });
-                }
+                const toolResult = await executeQrCodeTool({ url: targetUrl });
+                payload.text = aiContent;
+                payload.qrImage = toolResult.output;
+                payload.responseText = `Bhaisahab, here is your requested QR code image for: ${targetUrl}`;
+                conversationHistory.push({ role: 'assistant', content: payload.responseText });
             }
-        } else {
+        } 
+        else {
             payload.text = aiContent;
             conversationHistory.push(aiResponse);
         }
-        
         res.json(payload);
     } catch (err) {
-        console.error("🔴 Local System Server Error Stack:", err);
-        res.status(500).json({ text: `Internal Server Error: ${err.message}` });
+        console.error("🔴 Server routing error:", err);
+        res.status(500).json({ text: `Internal Error: ${err.message}` });
     }
 });
 
 app.listen(PORT, () => {
-    console.log(`🚀 'AI hai Bhaisahab' Workspace operational at http://localhost:${PORT}`);
+    console.log(`🚀 'AI hai Bhaisahab' Workspace running at http://localhost:${PORT}`);
 });
